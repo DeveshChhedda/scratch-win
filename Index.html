@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scratch & Win Popup</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: transparent; color: #fff; }
+        .overlay { 
+            display: flex; 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0, 0, 0, 0.6); 
+            justify-content: center; 
+            align-items: center; 
+            z-index: 999; 
+            opacity: 1; 
+            visibility: visible; 
+            transition: all 0.5s ease; 
+        }
+        .overlay.hidden { 
+            opacity: 0; 
+            visibility: hidden; 
+        }
+        .popup { 
+            background: linear-gradient(to bottom, #ff7f00, #ff5500); 
+            width: 90%; 
+            max-width: 350px; 
+            border-radius: 15px; 
+            text-align: center; 
+            padding: 20px; 
+            box-shadow: 0 7px 25px rgba(0, 0, 0, 0.5); 
+        }
+        .popup h1 { font-size: 26px; margin-bottom: 15px; }
+        .popup p { margin-bottom: 15px; }
+        .input-container { position: relative; margin-bottom: 15px; }
+        .input-container span { 
+            position: absolute; 
+            top: 50%; 
+            left: 10px; 
+            transform: translateY(-50%); 
+            font-size: 14px; 
+            color: #000; 
+        }
+        .popup input { 
+            padding: 10px 10px 10px 45px; 
+            border-radius: 5px; 
+            border: none; 
+            width: 100%; 
+            font-size: 14px; 
+        }
+        .error { 
+            display: none; 
+            color: #ff0000; 
+            font-size: 12px; 
+            margin-top: -10px; 
+            margin-bottom: 10px; 
+        }
+        .popup button { 
+            background-color: #fff; 
+            color: #f66a00; 
+            padding: 10px 20px; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            margin-top: 10px; 
+            transition: background-color 0.3s ease, transform 0.2s ease; 
+        }
+        .popup button:hover { 
+            background-color: #f68d2e; 
+            color: #fff; 
+            transform: scale(1.05); 
+        }
+        .popup button:disabled { 
+            background-color: #ccc; 
+            cursor: not-allowed; 
+        }
+        .scratch-card-container { 
+            position: relative; 
+            background-color: #fff; 
+            width: 100%; 
+            height: 200px; 
+            margin-top: 15px; 
+            border-radius: 10px; 
+            overflow: hidden; 
+        }
+        #scratchCanvas { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            cursor: pointer; 
+        }
+        #scratchCanvas.fade-out { 
+            opacity: 0; 
+        }
+        #scratchMessage { 
+            position: absolute; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%); 
+            color: #ff7f00; 
+            font-size: 20px; 
+            font-weight: bold; 
+            text-align: center; 
+            opacity: 0; 
+            visibility: hidden; 
+            transition: all 0.5s ease; 
+        }
+        #scratchMessage.active { 
+            opacity: 1; 
+            visibility: visible; 
+        }
+        #scratchMessage a { 
+            display: inline-block; 
+            margin-top: 10px; 
+            background: #ff7f00; 
+            color: #fff; 
+            text-decoration: none; 
+            padding: 10px 20px; 
+            border-radius: 5px; 
+            font-weight: bold; 
+            transition: background 0.3s ease; 
+        }
+        #scratchMessage a:hover { 
+            background: #e06700; 
+        }
+    </style>
+</head>
+<body>
+    <!-- Initial Popup -->
+    <div class="overlay" id="mainPopup">
+        <div class="popup">
+            <h1>Scratch and Win!</h1>
+            <p>Enter your mobile number to participate and win exciting prizes.</p>
+            <div class="input-container">
+                <span>+91 -</span>
+                <input type="text" id="mobile" placeholder="Enter your Mobile Number" maxlength="10" oninput="validateMobile()">
+            </div>
+            <div id="error" class="error">Please enter a valid 10-digit mobile number.</div>
+            <button id="scratchBtn" disabled>Submit & Play</button>
+        </div>
+    </div>
+
+    <!-- Scratch Card Popup -->
+    <div class="overlay hidden" id="scratchCardPopup">
+        <div class="popup">
+            <h1>Scratch to Reveal!</h1>
+            <div class="scratch-card-container">
+                <canvas id="scratchCanvas"></canvas>
+                <div id="scratchMessage">
+                    <div>🎉 ₹500 Off on Brokerage 🎉</div>
+                    <a href="https://open-account.anandrathi.com" target="_blank">Claim Now</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Background Website Loader -->
+    <div id="backgroundLoader" style="display: none;">
+        <iframe src="https://example.com" width="0" height="0" frameborder="0"></iframe>
+    </div>
+
+    <script>
+        const mobileInput = document.getElementById('mobile');
+        const scratchBtn = document.getElementById('scratchBtn');
+        const errorDiv = document.getElementById('error');
+        const mainPopup = document.getElementById('mainPopup');
+        const scratchCardPopup = document.getElementById('scratchCardPopup');
+        const scratchCanvas = document.getElementById('scratchCanvas');
+        const scratchMessage = document.getElementById('scratchMessage');
+        const ctx = scratchCanvas.getContext('2d');
+        const SHEET_URL = 'https://script.google.com/macros/s/AKfycbyrYSjcxjb-6NYI6PFQBpwmSfASuKSJUsx4hpTNFGlEtNEk3UR_Q_YiwFzudXgZyFV0Og/exec';
+
+        let cleared = 0;
+
+        function validateMobile() {
+            const mobileValue = mobileInput.value;
+            const isValid = /^[6-9]\d{9}$/.test(mobileValue);
+
+            if (mobileValue === "") {
+                errorDiv.style.display = "none";
+                scratchBtn.disabled = true;
+            } else if (!isValid) {
+                errorDiv.style.display = "block";
+                scratchBtn.disabled = true;
+            } else {
+                errorDiv.style.display = "none";
+                scratchBtn.disabled = false;
+            }
+        }
+
+        async function saveMobileToSheet(mobile) {
+            try {
+                await fetch(SHEET_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ mobile }),
+                    mode: "no-cors",
+                });
+                console.log("Mobile number submitted successfully.");
+            } catch (error) {
+                console.error("Error saving data:", error);
+                alert("An error occurred while submitting your data. Please try again.");
+            }
+        }
+
+        function loadWebsiteInBackground(url) {
+            const iframe = document.createElement('iframe');
+            iframe.src = url;
+            iframe.style.display = 'none';
+            document.getElementById('backgroundLoader').appendChild(iframe);
+        }
+
+        scratchBtn.addEventListener("click", () => {
+            const mobileValue = mobileInput.value;
+            mainPopup.classList.add("hidden");
+            scratchCardPopup.classList.remove("hidden");
+            initializeScratchCard();
+            saveMobileToSheet(mobileValue);
+            loadWebsiteInBackground("https://www.google.com"); // Load website in the background
+        });
+
+        function initializeScratchCard() {
+            scratchCanvas.width = scratchCanvas.offsetWidth;
+            scratchCanvas.height = scratchCanvas.offsetHeight;
+            ctx.fillStyle = "#aaa";
+            ctx.fillRect(0, 0, scratchCanvas.width, scratchCanvas.height);
+
+            scratchCanvas.addEventListener("mousemove", scratch);
+
+            function scratch(e) {
+                const rect = scratchCanvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                ctx.globalCompositeOperation = "destination-out";
+                ctx.beginPath();
+                ctx.arc(x, y, 20, 0, Math.PI * 2);
+                ctx.fill();
+
+                cleared += Math.PI * 20 ** 2;
+                if (cleared / (scratchCanvas.width * scratchCanvas.height) > 0.7) revealMessage();
+            }
+
+            function revealMessage() {
+                scratchMessage.classList.add("active");
+                scratchCanvas.classList.add("fade-out");
+                scratchCanvas.removeEventListener("mousemove", scratch);
+            }
+        }
+
+        mobileInput.addEventListener("input", validateMobile);
+    </script>
+</body>
+</html>
